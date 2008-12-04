@@ -66,6 +66,17 @@ module MailerTags
   tag "mailer:if_error:message" do |tag|
     tag.locals.error_message
   end
+  
+  desc %{Outputs the error message of fields.}
+  tag "mailer:errors" do |tag|
+    error_string = ""
+    if last_mail
+      error_string = "<h3>Errors Found</h3>"
+      last_mail.errors.delete("form")
+      last_mail.errors.each{|k, v| error_string << "#{v}<br/>"} 
+    end
+   error_string
+  end
 
   desc %{
     Generates a form for submitting email.
