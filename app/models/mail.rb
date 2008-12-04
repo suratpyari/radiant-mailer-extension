@@ -7,8 +7,8 @@ class Mail
   end
 
   def self.valid_config?(config)
-    return false if config['recipients'].blank? and config['recipients_field'].blank?
-    return false if config['from'].blank? and config['from_field'].blank?
+    return false if config['recipients'].blank? #and config['recipients_field'].blank?
+   #return false if config['from'].blank? #and config['from_field'].blank?
     true
   end
 
@@ -48,8 +48,8 @@ class Mail
   end
 
   def from
-    config[:from] || data[config[:from_field]]
-  end
+    config[:from] || data[config[:from_field]] || data[:from_field]
+  end 
 
   def recipients
     config[:recipients] || data[config[:recipients_field]].split(/,/).collect{|e| e.strip}

@@ -12,7 +12,6 @@ class MailController < ApplicationController
     mail = Mail.new(part_page, config, params[:mailer])
     @page.last_mail = part_page.last_mail = mail
     process_mail(mail, config)
-
     if mail.send
       redirect_to (config[:redirect_to] || "#{@page.url}#mail_sent")
     else

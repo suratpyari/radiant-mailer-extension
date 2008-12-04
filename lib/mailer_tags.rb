@@ -1,6 +1,5 @@
 module MailerTags
   include Radiant::Taggable
-  include ActionView::Helpers::DateHelper
 
   def config
     @config ||= begin
@@ -12,7 +11,6 @@ module MailerTags
       (string.empty? ? {} : YAML::load(string))
     end
   end
-
   desc %{ All mailer-related tags live inside this one. }
   tag "mailer" do |tag|
     if Mail.valid_config?(config)
@@ -133,7 +131,7 @@ module MailerTags
     add_required(result, tag)
   end
 
-  desc %{
+  %{
     Renders a series of @<input type="radio" .../>@ tags for a mailer form.  The 'name' attribute is required.
     Nested @<r:option />@ tags will generate individual radio buttons with corresponding values. }
   tag 'mailer:radiogroup' do |tag|
@@ -161,128 +159,29 @@ module MailerTags
       %(<input type="radio" value="#{value}"#{%( checked="checked") if selected} #{mailer_attrs(tag)} />)
     end
   end
-  
-  desc %{
-    Provides a mechanism to iterate over array datum submitted via a 
-    mailer form. Used in the 'email', 'email_html', and 'mailer' parts to 
-    generate the resulting email. May work OK nested, but this hasn't been 
-    tested.
-  }
-  tag 'mailer:get_each' do |tag|
-    name = tag.attr['name']
-    mail = tag.locals.page.last_mail
-    if tag.locals.mailer_element then
-      ary=tag.locals.mailer_element
-    else
-      ary=mail.data[name]
-    end
-    result=[]
-    return '' if ary.blank?
-
-    case ary
-      when Array
-        ary.each_with_index do |element, idx|
-          tag.locals.mailer_key=idx
-          tag.locals.mailer_element = element
-          result << tag.expand
-        end
-      else
-        ary.each do |key, element|
-          tag.locals.mailer_key=key
-          tag.locals.mailer_element = element
-          result << tag.expand
-        end
-    end
-    result
-  end
-  
-  desc %{ 
-    Uses @ActionView::Helpers::DateHelper.date_select@ to render three select tags for date selection. 
-  }
-  tag 'mailer:date_select' do |tag|
-    raise_error_if_name_missing "mailer:date_select", tag.attr
-    name = tag.attr.delete('name')
-    
-    options = {}
-    
-    tag.attr.each do |k, v|
-      if v =~ /(true|false)/
-        options[k] = (v == 'true')
-      elsif v =~ /\d+/
-        options[k] = v.to_i
-      elsif k == 'order'
-        options[k] = v.split(',').map(&:strip).map(&:to_sym)
-      else
-        options[k] = v
-      end
-    end
-    
-    options.symbolize_keys!
-    
-    date_select('mailer', name, options)
-  end
 
   desc %{
-    Renders the value of a datum submitted via a mailer form.  Used in the 
-    'email', 'email_html', and 'mailer' parts to generate the resulting email.
-    When used within mailer:get_each it defaults to getting elements within 
-    that array. 
-  }
+    Renders the value of a datum submitted via a mailer form.  Used in the 'email', 'email_html', and
+    'mailer' parts to generate the resulting email. }
   tag 'mailer:get' do |tag|
     name = tag.attr['name']
     mail = tag.locals.page.last_mail
-    if tag.locals.mailer_element then
-      element = tag.locals.mailer_element
-    else
-      element = tag.locals.page.last_mail.data
-    end
     if name
-      format_mailer_data(element, name)
+      mail.data[name].is_a?(Array) ? mail.data[name].to_sentence : mail.data[name]
     else
-      element.to_hash.to_yaml.to_s
+      mail.data.to_hash.to_yaml.to_s
     end
-  end
-    
-  desc %{
-    For use within a mailer:get_each to output the index/key for each element 
-    of the hash. 
-  }
-  tag 'mailer:index' do |tag|
-    tag.locals.mailer_key || nil
   end
 
   desc %{
-    Renders the contained block if a named datum was submitted via a mailer 
-    form.  Used in the 'email', 'email_html' and 'mailer' parts to generate 
-    the resulting email.
+    Renders the contained block if a named datum was submitted via a mailer form.  Used in the 'email', 'email_html' and 'mailer' parts
+    to generate the resulting email.
   }
   tag 'mailer:if_value' do |tag|
     name = tag.attr['name']
     eq = tag.attr['equals']
     mail = tag.locals.page.last_mail || tag.globals.page.last_mail
     tag.expand if name && mail.data[name] && (eq.blank? || eq == mail.data[name])
-  end
-  
-  def format_mailer_data(element, name)
-    data = element[name]
-    if Array === data
-      data.to_sentence
-    elsif date = detect_date(element, name)
-      date
-    else
-      data
-    end
-  end
-  
-  def detect_date(mail, name)
-    date_components = mail.select { |key, value| key =~ Regexp.new("#{name}\\(\\di\\)") }
-    
-    if date_components.length == 3
-      date_values = date_components.sort { |a, b| a[0] <=> b[0] }.map { |v| v[1].to_i }
-      return Date.new(*date_values)
-    else
-      return nil
-    end
   end
 
   def prior_value(tag, tag_name=tag.attr['name'])
